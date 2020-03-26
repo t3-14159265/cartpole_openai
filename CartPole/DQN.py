@@ -16,7 +16,12 @@ EPOCHS = 1000
 THRESHOLD = 100
 MONITOR = True
 
-class DQN:   
+
+#DNQ CLASS
+class DQN: 
+    
+    
+    #INIT
     def __init__(self, env_string, batch_size=64):
         self.memory = deque(maxlen=100000)
         self.env = gym.make(env_string)
@@ -52,16 +57,20 @@ class DQN:
                                           decay=alpha_decay))
     
     
-    
+    #ADDING TO MEMORY BUFFER
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
     
-    
+    #TRAIN THE NETWORK AT THE END OF EACH EPISODE
     def replay(self, batch_size):
         x_batch, y_batch = [], []
+        
+        #sample from memory buffer to avoid over fitting
         minibatch = random.sample(self.memory,
                                   min(len(self.memory),
                                       batch_size))
+        
+        
         for state, action, reward, next_state, done in minibatch:
             y_target = self.model.predict(state)
             y_target[0][action] = reward if done else reward + self.gamma * np.max(self.model.predict(next_state)[0])
@@ -72,17 +81,19 @@ class DQN:
                            batch_size=len(x_batch),
                            verbose=0)
     
-    #epsilon greedy policy
+    #EPSILON GREEDY POLICY
     def choose_action(self, state, epsilon):
         if np.random.random() <= epsilon:
             return self.env.action_space.sample()
         else:
             return np.argmax(self.model.predict(state))
     
+    #TRAIN THE NETWORK
     def train(self):
         scores = deque(maxlen=100)
         avg_scores = []
         for e in range(EPOCHS):
+            #reset the environment to restart the game
             state = self.env.reset()
             state = self.preprocess_state(state)
             done = False
@@ -94,12 +105,12 @@ class DQN:
                 action = self.choose_action(state, self.epsilon)
                 
                 next_state, reward, done, _ = self.env.step(action)
-
                 next_state = self.preprocess_state(next_state)
                 
                 #store in memory buffer for training network
                 self.remember(state, action, reward, next_state, done)
                 
+                #update current state
                 state = next_state
                 
                 #epsilon decay
@@ -112,11 +123,14 @@ class DQN:
                 mean_score = np.mean(scores)
                 print(mean_score)
                 avg_scores.append(mean_score)
+                
+                #if required score achieved
                 if mean_score >= THRESHOLD:
                     print('Ran {} episodes. SOlved after {} trials'.format(e, e - 100))
                     return avg_scores
                     break;
-                
+            
+            #limit number of epochs to 100
             if e % 100 == 0 and e > 0:
                 print('[Episode {} - Mean surival time over last 100 episodes was {} ticks'.format(e, mean_score))
                 print('Did not solve after {} episodes :'.format(e))
@@ -126,10 +140,12 @@ class DQN:
             self.replay(self.batch_size)
 
     
+    #PREPROCESS THE STATE
     def preprocess_state(self, state):
         return np.reshape(state, [1, self.input_size])
 
 
+#SET UP ENVIRONMENT AND RUN CLASS
 env_string = 'CartPole-v0'
 agent = DQN(env_string)
 scores = agent.train()
