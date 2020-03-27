@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 
 EPOCHS = 1000
-THRESHOLD = 100
+THRESHOLD = 195
 MONITOR = True
 
 
@@ -90,14 +90,13 @@ class DQN:
     
     #TRAIN THE NETWORK
     def train(self):
-        scores = deque(maxlen=100)
-        avg_scores = []
+        score_totals = []
         for e in range(EPOCHS):
             #reset the environment to restart the game
             state = self.env.reset()
             state = self.preprocess_state(state)
             done = False
-            i = 0
+            score = 0
             
             #play an episode of cartpole
             while not done:
@@ -117,26 +116,32 @@ class DQN:
                 self.epsilon = max(self.epsilon_min,
                                    self.epsilon_decay*self.epsilon) # decrease epsilon
                 
-                #in episode timer
-                i += 1
-                scores.append(i)
-                mean_score = np.mean(scores)
-                print(mean_score)
-                avg_scores.append(mean_score)
-                
+                #in episode timer as score
+                score += 1
+                #mean_score = np.mean(scores)
+                #print(scores)
+                #print(mean_score)
+                #avg_scores.append(mean_score)
+                if done:
+                    score_totals.append(score)
                 #if required score achieved
-                if mean_score >= THRESHOLD:
+                if score >= THRESHOLD:
                     print('Ran {} episodes. SOlved after {} trials'.format(e, e - 100))
-                    return avg_scores
+                    score_totals.append(score)
+                    return score_totals
                     break;
             
             #limit number of epochs to 100
             if e % 100 == 0 and e > 0:
+                score_totals.append(score)
                 print('[Episode {} - Mean surival time over last 100 episodes was {} ticks'.format(e, mean_score))
                 print('Did not solve after {} episodes :'.format(e))
-                return avg_scores
+                return score_totals
                 break;
             #train the network at the end of each episode
+            print("----------------------TRAINING------------------------")
+            print('EPOCH No: ',e)
+            print('score totals ', score_totals)
             self.replay(self.batch_size)
 
     
@@ -148,8 +153,8 @@ class DQN:
 #SET UP ENVIRONMENT AND RUN CLASS
 env_string = 'CartPole-v0'
 agent = DQN(env_string)
-scores = agent.train()
+r = agent.train()
 
-plt.plot(scores)
+plt.plot(r)
 plt.show()
 
